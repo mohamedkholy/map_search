@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:map_search/core/theming/my_colors.dart';
 import 'package:map_search/features/map/data/models/place.dart';
 import 'package:map_search/features/map/logic/map_cubit.dart';
-import 'package:map_search/core/theming/my_colors.dart';
 import 'package:map_search/features/map/ui/widgets/result_item.dart';
 
 class HistoryScreen extends StatefulWidget {

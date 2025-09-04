@@ -1,8 +1,8 @@
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:map_search/features/map/data/models/place.dart';
 import 'package:map_search/core/helpers.dart/distance_calculator.dart' as dc;
+import 'package:map_search/features/map/data/models/place.dart';
 
 class ResultItem extends StatelessWidget {
   final Place place;
@@ -69,8 +69,19 @@ class ResultItem extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(place.name),
-                      Text(place.address!, maxLines: 1),
+                      Text(
+                        place.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        place.address!,
+                        maxLines: 1,
+
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),
@@ -78,7 +89,10 @@ class ResultItem extends StatelessWidget {
                 if (onArrowClick != null)
                   GestureDetector(
                     onTap: () => onArrowClick!(place.name),
-                    child: const Icon(IconData(0xe806, fontFamily: "ArrowUp")),
+                    child: const Icon(
+                      IconData(0xe806, fontFamily: "ArrowUp"),
+                      size: 22,
+                    ),
                   ),
                 if (onDeleteClick != null)
                   GestureDetector(

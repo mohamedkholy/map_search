@@ -17,7 +17,6 @@ class MapCubit extends Cubit<MapState> {
 
   void search(String query) async {
     try {
-      print(query);
       final places = await apiService.searchPlaces(query);
       emit(SearchReslutsLoaded(places: places));
     } catch (e) {

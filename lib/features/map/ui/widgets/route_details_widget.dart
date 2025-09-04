@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:map_search/core/theming/my_colors.dart';
 import 'package:map_search/features/map/data/models/place.dart';
+import 'package:map_search/features/map/logic/map_cubit.dart';
 import 'package:map_search/features/map/ui/widgets/expand_button.dart';
 import 'package:map_search/features/map/ui/widgets/route_details_column.dart';
 
@@ -54,6 +57,21 @@ class _RouteDetailsWidgetState extends State<RouteDetailsWidget> {
                     isExpanded = !isExpanded;
                   });
                 },
+              ),
+              const SizedBox(width: 10),
+              InkWell(
+                onTap: () {
+                  context.read<MapCubit>().updateLocation(
+                    widget.currentLocation,
+                  );
+                },
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: MyColors.primary,
+                    borderRadius: BorderRadius.all(Radius.circular(5)),
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 28),
+                ),
               ),
             ],
           ),

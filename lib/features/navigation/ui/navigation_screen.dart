@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:map_search/core/theming/my_colors.dart';
 import 'package:map_search/features/map/data/models/place.dart';
@@ -23,21 +24,21 @@ class NavigationScreen extends StatefulWidget {
   State<NavigationScreen> createState() => _NavigationScreenState();
 }
 
-class _NavigationScreenState extends State<NavigationScreen> {
-  final MapController _mapController = MapController();
+class _NavigationScreenState extends State<NavigationScreen>
+    with TickerProviderStateMixin {
+  late final AnimatedMapController _animatedMapController =
+      AnimatedMapController(vsync: this, curve: Curves.easeInOut);
   late final NavigationCubit _navigationCubit = context.read();
   late LatLng _currentPosition = widget.currentLocation;
+  late LatLng _oldPosition = widget.currentLocation;
   late List<LatLng> _currentRoute = widget.route;
   double _currentZoom = 19;
   final ValueNotifier<bool> _movedPositionNotifier = ValueNotifier(false);
+  double _markerRotation = 0;
 
   @override
   void initState() {
     super.initState();
-    print(
-      "${widget.currentLocation.latitude} ${widget.currentLocation.longitude}",
-    );
-    print("${widget.place.lat} ${widget.place.lon}");
     _navigationCubit.trackLocation(
       widget.place,
       widget.currentLocation,
@@ -46,38 +47,43 @@ class _NavigationScreenState extends State<NavigationScreen> {
   }
 
   @override
-  void dispose() {
-    _navigationCubit.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
+      onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
-          Navigator.pop(context, (_currentPosition, null));
+          await _navigationCubit.dispose();
+          if (context.mounted) {
+            Navigator.pop(context, (_currentPosition, null));
+          }
         }
       },
       child: Scaffold(
         body: BlocConsumer<NavigationCubit, NavigationState>(
-          listener: (context, state) {
+          listener: (context, state) async {
             if (state is DestinationReached) {
-              print("Destination reached");
-              Navigator.pop(context, (_currentPosition, widget.place));
+              await _navigationCubit.dispose();
+              if (context.mounted) {
+                Navigator.pop(context, (_currentPosition, widget.place));
+              }
             }
           },
           builder: (context, state) {
             if (state is LocationUpdated) {
+              _oldPosition = _currentPosition;
               _currentPosition = LatLng(
                 state.position.latitude,
                 state.position.longitude,
               );
               _currentRoute = state.route;
               if (!_movedPositionNotifier.value) {
-                _mapController.moveAndRotate(_currentPosition, _currentZoom, 0);
+                _animatedMapController.animateTo(
+                  dest: _currentPosition,
+                  zoom: _currentZoom,
+                  rotation: 360 - (_markerRotation * 180 / pi),
+                );
               }
+              _markerRotation = state.markerRotation;
             }
             return SafeArea(
               child: Stack(
@@ -94,7 +100,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                       initialCenter: _currentPosition,
                       initialZoom: _currentZoom,
                     ),
-                    mapController: _mapController,
+                    mapController: _animatedMapController.mapController,
                     children: [
                       TileLayer(
                         urlTemplate:
@@ -104,13 +110,18 @@ class _NavigationScreenState extends State<NavigationScreen> {
                       MarkerLayer(
                         markers: [
                           Marker(
+                            width: 45,
+                            height: 45,
                             point: _currentPosition,
-                            child: Image.asset(
-                              'assets/images/car.png',
-                              width: 40,
-                              height: 40,
+                            child: Transform.rotate(
+                              angle: _markerRotation,
+                              child: Image.asset('assets/images/car.png'),
                             ),
                           ),
+                        ],
+                      ),
+                      MarkerLayer(
+                        markers: [
                           Marker(
                             point: LatLng(
                               double.parse(widget.place.lat),
@@ -119,6 +130,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                             child: const Icon(
                               Icons.location_on,
                               color: Colors.red,
+                              size: 35,
                             ),
                           ),
                         ],
@@ -128,7 +140,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           Polyline(
                             points: _currentRoute,
                             color: Colors.blue,
-                            strokeWidth: 2,
+                            strokeWidth: 4,
                           ),
                         ],
                       ),
@@ -141,10 +153,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
                           ? GestureDetector(
                               onTap: () {
                                 _currentZoom = 19;
-                                _mapController.moveAndRotate(
-                                  _currentPosition,
-                                  _currentZoom,
-                                  0,
+                                _animatedMapController.animateTo(
+                                  dest: _currentPosition,
+                                  zoom: _currentZoom,
+                                  rotation: 360 - (_markerRotation * 180 / pi),
                                 );
                                 _movedPositionNotifier.value = false;
                               },

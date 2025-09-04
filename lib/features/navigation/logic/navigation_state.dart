@@ -5,12 +5,11 @@ abstract class NavigationState {}
 
 class NavigationInitial extends NavigationState {}
 
-
 class LocationUpdated extends NavigationState {
   final Position position;
   final List<LatLng> route;
-  LocationUpdated({required this.position, required this.route});
-} 
-
-class DestinationReached extends NavigationState {
+  final double markerRotation;
+  LocationUpdated({required this.position, required this.route, required this.markerRotation});
 }
+
+class DestinationReached extends NavigationState {}

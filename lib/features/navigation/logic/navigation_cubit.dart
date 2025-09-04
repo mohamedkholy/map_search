@@ -27,7 +27,7 @@ class NavigationCubit extends Cubit<NavigationState> {
     _positionStreamSubscription =
         Geolocator.getPositionStream(
           locationSettings: AndroidSettings(
-            intervalDuration: const Duration(seconds: 1),
+            intervalDuration: const Duration(milliseconds: 500),
           ),
         ).listen((position) async {
           if (!isClosed &&
@@ -36,25 +36,37 @@ class NavigationCubit extends Cubit<NavigationState> {
             currentLocation = LatLng(position.latitude, position.longitude);
             if (_distance.distance(currentLocation, destinationLocation) < 50) {
               emit(DestinationReached());
-              dispose();
+              await dispose();
               return;
             }
             CurrentLocationSP.saveLocationToSP(currentLocation);
             if (currentRoute != null) {
               currentRoute = snapToRoute(currentLocation, currentRoute!);
-              if (currentRoute == null) print("new route");
               currentRoute ??= await apiService.fetchRouteFromOSRM(
                 currentLocation,
                 LatLng(double.parse(place.lat), double.parse(place.lon)),
               );
-              emit(LocationUpdated(position: position, route: currentRoute!));
+              if (currentRoute!.length > 1) {
+                final rotation = calculateRotation(
+                  currentRoute![0],
+                  currentRoute![1],
+                );
+
+                emit(
+                  LocationUpdated(
+                    position: position,
+                    route: currentRoute!,
+                    markerRotation: rotation,
+                  ),
+                );
+              }
             }
           }
         });
   }
 
-  void dispose() {
-    _positionStreamSubscription.cancel();
+  Future<void> dispose() async {
+    await _positionStreamSubscription.cancel();
   }
 
   (LatLng?, bool) _projectPointOnSegment(LatLng a, LatLng b, LatLng p) {
@@ -86,12 +98,6 @@ class NavigationCubit extends Cubit<NavigationState> {
   }
 
   List<LatLng>? snapToRoute(LatLng current, List<LatLng> route) {
-    if (route.length < 2) return route;
-
-    if (_distance.distance(current, route.first) > 100) {
-      return null;
-    }
-
     int bestSegmentIndex = -1;
     LatLng? bestPoint;
 
@@ -106,7 +112,6 @@ class NavigationCubit extends Cubit<NavigationState> {
       if (a == b) continue;
 
       final (q, isInside) = _projectPointOnSegment(a, b, current);
-      print("isInside $isInside");
       if (isInside) {
         bestSegmentIndex = i;
         bestPoint = q;
@@ -116,10 +121,22 @@ class NavigationCubit extends Cubit<NavigationState> {
 
     if (bestPoint == null) return null;
 
+    if (_distance.distance(current, bestPoint) > 10) {
+      return null;
+    }
+
     final remaining = <LatLng>[];
     remaining.add(bestPoint);
     remaining.addAll(route.sublist(bestSegmentIndex + 1));
 
     return remaining;
+  }
+
+  double calculateRotation(LatLng bestPoint, LatLng nextPoint) {
+    final y1 = bestPoint.longitude;
+    final x1 = bestPoint.latitude;
+    final y2 = nextPoint.longitude;
+    final x2 = nextPoint.latitude;
+    return atan2(y2 - y1, x2 - x1);
   }
 }

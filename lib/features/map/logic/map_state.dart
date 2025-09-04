@@ -4,7 +4,6 @@ import 'package:map_search/features/map/data/models/place.dart';
 
 abstract class MapState {}
 
-
 class MapInitial extends MapState {}
 
 class SearchReslutsLoaded extends MapState {

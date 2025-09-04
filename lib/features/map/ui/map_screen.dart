@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_map_animations/flutter_map_animations.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:map_search/core/helpers.dart/distance_calculator.dart' as dc;
 import 'package:map_search/core/theming/my_colors.dart';
@@ -13,7 +14,7 @@ import 'package:map_search/features/map/ui/widgets/current_location_button.dart'
 import 'package:map_search/features/map/ui/widgets/destination_reached_widget.dart';
 import 'package:map_search/features/map/ui/widgets/error_state_widget.dart';
 import 'package:map_search/features/map/ui/widgets/route_details_widget.dart';
-import 'package:map_search/features/map/ui/widgets/search_field.dart';
+import 'package:map_search/features/map/ui/widgets/search_column.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -22,10 +23,11 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends State<MapScreen> with TickerProviderStateMixin {
   late LatLng currentLocation;
   ValueNotifier<bool> isLocationDeniedExpanded = ValueNotifier(false);
-  final MapController mapController = MapController();
+  late final AnimatedMapController _animatedMapController =
+      AnimatedMapController(vsync: this);
   bool isMapReady = false;
   late final MapCubit _mapCubit = context.read();
   List<Marker> markers = [];
@@ -125,6 +127,7 @@ class _MapScreenState extends State<MapScreen> {
                           markers.remove(_selectedPlaceMarker!);
                         }
                         _selectedPlaceMarker = Marker(
+                          alignment: Alignment.center,
                           point: LatLng(
                             double.parse(state.place.lat),
                             double.parse(state.place.lon),
@@ -132,15 +135,15 @@ class _MapScreenState extends State<MapScreen> {
                           child: const Icon(
                             Icons.location_on,
                             color: Colors.red,
-                            size: 25,
+                            size: 35,
                           ),
                         );
                         markers.add(_selectedPlaceMarker!);
                         route = state.route;
 
                         if (isMapReady) {
-                          mapController.fitCamera(
-                            CameraFit.bounds(
+                          _animatedMapController.animatedFitCamera(
+                            cameraFit: CameraFit.bounds(
                               bounds: dc.DistanceCalculator.getBounds(
                                 LatLng(
                                   double.parse(state.place.lat),
@@ -153,7 +156,7 @@ class _MapScreenState extends State<MapScreen> {
                         }
                       }
                       return FlutterMap(
-                        mapController: mapController,
+                        mapController: _animatedMapController.mapController,
                         options: MapOptions(
                           onMapReady: () {
                             isMapReady = true;
@@ -222,7 +225,7 @@ class _MapScreenState extends State<MapScreen> {
                     buildWhen: (previous, current) => current is LocationLoaded,
                     builder: (context, state) {
                       if (state is LocationLoaded) {
-                        return SearchField(currentLocation: state.location);
+                        return SearchColumn(currentLocation: state.location);
                       }
                       return const SizedBox.shrink();
                     },
@@ -300,7 +303,11 @@ class _MapScreenState extends State<MapScreen> {
 
   void animateCameraToCurrentLocation() {
     if (currentLocation != const LatLng(0, 0) && isMapReady) {
-      mapController.moveAndRotate(currentLocation, 16, 0);
+      _animatedMapController.animateTo(
+        dest: currentLocation,
+        zoom: 16,
+        rotation: 0,
+      );
     }
   }
 }
