@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:map_search/core/helpers.dart/distance_calculator.dart' as dc;
 import 'package:map_search/core/theming/my_colors.dart';
 import 'package:map_search/features/map/data/models/place.dart';
 import 'package:map_search/features/map/logic/map_cubit.dart';
@@ -9,10 +10,10 @@ import 'package:map_search/features/map/logic/map_state.dart';
 import 'package:map_search/features/map/ui/history_screen.dart';
 import 'package:map_search/features/map/ui/widgets/collapesd_error_widget.dart';
 import 'package:map_search/features/map/ui/widgets/current_location_button.dart';
+import 'package:map_search/features/map/ui/widgets/destination_reached_widget.dart';
 import 'package:map_search/features/map/ui/widgets/error_state_widget.dart';
 import 'package:map_search/features/map/ui/widgets/route_details_widget.dart';
 import 'package:map_search/features/map/ui/widgets/search_field.dart';
-import 'package:map_search/core/helpers.dart/distance_calculator.dart' as dc;
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -63,7 +64,7 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ),
               ).then((value) {
-                if (currentLocation != const LatLng(0, 0)) {
+                if (currentLocation != const LatLng(0, 0) && value != null) {
                   _mapCubit.fetchRouteFromOSRM(currentLocation, value as Place);
                 }
               });
@@ -262,6 +263,18 @@ class _MapScreenState extends State<MapScreen> {
                       return const SizedBox.shrink();
                     },
                   ),
+                  BlocBuilder<MapCubit, MapState>(
+                    buildWhen: (previous, current) => current is LocationLoaded,
+                    builder: (context, state) {
+                      if (state is LocationLoaded && state.place != null) {
+                        return DestinationReachedWidget(
+                          place: state.place!,
+                          location: state.location,
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
                 ],
               ),
             ),
@@ -287,7 +300,7 @@ class _MapScreenState extends State<MapScreen> {
 
   void animateCameraToCurrentLocation() {
     if (currentLocation != const LatLng(0, 0) && isMapReady) {
-      mapController.move(currentLocation, 16);
+      mapController.moveAndRotate(currentLocation, 16, 0);
     }
   }
 }

@@ -17,6 +17,7 @@ class MapCubit extends Cubit<MapState> {
 
   void search(String query) async {
     try {
+      print(query);
       final places = await apiService.searchPlaces(query);
       emit(SearchReslutsLoaded(places: places));
     } catch (e) {
@@ -33,8 +34,8 @@ class MapCubit extends Cubit<MapState> {
     return location;
   }
 
-  void updateLocation(LatLng location) {
-    emit(LocationLoaded(location: location));
+  void updateLocation(LatLng location, [Place? place]) {
+    emit(LocationLoaded(location: location, place: place));
   }
 
   Future<void> checkLocationStatus(LatLng savedLocation) async {

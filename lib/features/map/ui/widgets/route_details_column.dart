@@ -110,7 +110,7 @@ class RouteDetailsColumn extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>  BlocProvider(
+                builder: (context) => BlocProvider(
                   create: (context) => NavigationCubit(),
                   child: NavigationScreen(
                     currentLocation: currentLocation,
@@ -119,11 +119,14 @@ class RouteDetailsColumn extends StatelessWidget {
                   ),
                 ),
               ),
-            ).then((value) {
-               if(context.mounted){
-                context.read<MapCubit>().updateLocation(value);
-               }
-            },);
+            ).then((value) async {
+              if (context.mounted) {
+                final (LatLng location, Place? place) = value;
+                if (context.mounted) {
+                  context.read<MapCubit>().updateLocation(location, place);
+                }
+              }
+            });
           },
           icon: const Icon(Icons.navigation_sharp, size: 25),
           label: const Text(

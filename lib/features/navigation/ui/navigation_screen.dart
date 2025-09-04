@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:map_search/core/theming/my_colors.dart';
 import 'package:map_search/features/map/data/models/place.dart';
 import 'package:map_search/features/navigation/logic/navigation_cubit.dart';
 import 'package:map_search/features/navigation/logic/navigation_state.dart';
@@ -27,6 +28,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
   late final NavigationCubit _navigationCubit = context.read();
   late LatLng _currentPosition = widget.currentLocation;
   late List<LatLng> _currentRoute = widget.route;
+  double _currentZoom = 19;
+  final ValueNotifier<bool> _movedPositionNotifier = ValueNotifier(false);
 
   @override
   void initState() {
@@ -35,7 +38,11 @@ class _NavigationScreenState extends State<NavigationScreen> {
       "${widget.currentLocation.latitude} ${widget.currentLocation.longitude}",
     );
     print("${widget.place.lat} ${widget.place.lon}");
-    _navigationCubit.trackLocation(widget.place, widget.currentLocation);
+    _navigationCubit.trackLocation(
+      widget.place,
+      widget.currentLocation,
+      widget.route,
+    );
   }
 
   @override
@@ -50,11 +57,17 @@ class _NavigationScreenState extends State<NavigationScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
-          Navigator.pop(context, _currentPosition);
+          Navigator.pop(context, (_currentPosition, null));
         }
       },
       child: Scaffold(
-        body: BlocBuilder<NavigationCubit, NavigationState>(
+        body: BlocConsumer<NavigationCubit, NavigationState>(
+          listener: (context, state) {
+            if (state is DestinationReached) {
+              print("Destination reached");
+              Navigator.pop(context, (_currentPosition, widget.place));
+            }
+          },
           builder: (context, state) {
             if (state is LocationUpdated) {
               _currentPosition = LatLng(
@@ -62,44 +75,114 @@ class _NavigationScreenState extends State<NavigationScreen> {
                 state.position.longitude,
               );
               _currentRoute = state.route;
-              _mapController.move(_currentPosition, 18);
+              if (!_movedPositionNotifier.value) {
+                _mapController.moveAndRotate(_currentPosition, _currentZoom, 0);
+              }
             }
-            return FlutterMap(
-              options: MapOptions(
-                initialCenter: _currentPosition,
-                initialZoom: 18,
-              ),
-              mapController: _mapController,
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.dev3mk.map_search',
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _currentPosition,
-                      child: const Icon(Icons.person),
+            return SafeArea(
+              child: Stack(
+                children: [
+                  FlutterMap(
+                    options: MapOptions(
+                      onPositionChanged: (MapCamera camera, bool hasGesture) {
+                        if (hasGesture) {
+                          _currentZoom = camera.zoom;
+                          _movedPositionNotifier.value = true;
+                        }
+                      },
+
+                      initialCenter: _currentPosition,
+                      initialZoom: _currentZoom,
                     ),
-                    Marker(
-                      point: LatLng(
-                        double.parse(widget.place.lat),
-                        double.parse(widget.place.lon),
+                    mapController: _mapController,
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.dev3mk.map_search',
                       ),
-                      child: const Icon(Icons.person),
-                    ),
-                  ],
-                ),
-                PolylineLayer(
-                  polylines: [
-                    Polyline(
-                      points: _currentRoute,
-                      color: Colors.blue,
-                      strokeWidth: 2,
-                    ),
-                  ],
-                ),
-              ],
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: _currentPosition,
+                            child: Image.asset(
+                              'assets/images/car.png',
+                              width: 40,
+                              height: 40,
+                            ),
+                          ),
+                          Marker(
+                            point: LatLng(
+                              double.parse(widget.place.lat),
+                              double.parse(widget.place.lon),
+                            ),
+                            child: const Icon(
+                              Icons.location_on,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      PolylineLayer(
+                        polylines: [
+                          Polyline(
+                            points: _currentRoute,
+                            color: Colors.blue,
+                            strokeWidth: 2,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  ValueListenableBuilder(
+                    valueListenable: _movedPositionNotifier,
+                    builder: (context, value, child) {
+                      return value
+                          ? GestureDetector(
+                              onTap: () {
+                                _currentZoom = 19;
+                                _mapController.moveAndRotate(
+                                  _currentPosition,
+                                  _currentZoom,
+                                  0,
+                                );
+                                _movedPositionNotifier.value = false;
+                              },
+                              child: Align(
+                                alignment: Alignment.bottomRight,
+                                child: Container(
+                                  margin: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.navigation_outlined,
+                                        color: MyColors.primary,
+                                      ),
+                                      SizedBox(width: 5),
+                                      Text(
+                                        "Re-center",
+                                        style: TextStyle(
+                                          color: MyColors.primary,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            )
+                          : const SizedBox();
+                    },
+                  ),
+                ],
+              ),
             );
           },
         ),

@@ -4,6 +4,7 @@ import 'package:map_search/features/map/data/models/place.dart';
 
 abstract class MapState {}
 
+
 class MapInitial extends MapState {}
 
 class SearchReslutsLoaded extends MapState {
@@ -17,7 +18,8 @@ class FetchingRoute extends MapState {}
 
 class LocationLoaded extends MapState {
   final LatLng location;
-  LocationLoaded({required this.location});
+  final Place? place;
+  LocationLoaded({required this.location, this.place});
 }
 
 class HistoryLoaded extends MapState {

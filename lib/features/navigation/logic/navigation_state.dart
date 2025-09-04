@@ -11,3 +11,6 @@ class LocationUpdated extends NavigationState {
   final List<LatLng> route;
   LocationUpdated({required this.position, required this.route});
 } 
+
+class DestinationReached extends NavigationState {
+}

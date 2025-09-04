@@ -27,6 +27,12 @@ class _SearchFieldState extends State<SearchField> {
   final FocusNode focusNode = FocusNode();
 
   @override
+  void didUpdateWidget(covariant SearchField oldWidget) {
+    currentLocation = widget.currentLocation;
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
   void dispose() {
     super.dispose();
     _searchController.dispose();
@@ -44,6 +50,13 @@ class _SearchFieldState extends State<SearchField> {
           padding: const EdgeInsets.symmetric(vertical: 5),
           width: double.infinity,
           decoration: BoxDecoration(
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 5),
+              ),
+            ],
             color: Colors.white,
             borderRadius: BorderRadius.circular(25),
           ),
@@ -51,7 +64,7 @@ class _SearchFieldState extends State<SearchField> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 15),
                 child: Row(
                   children: [
                     Expanded(
@@ -74,7 +87,7 @@ class _SearchFieldState extends State<SearchField> {
                         decoration: InputDecoration(
                           border: InputBorder.none,
                           hintText: 'Search...',
-                          hintStyle: TextStyle(color: Colors.grey.shade400),
+                          hintStyle: TextStyle(color: Colors.grey.shade500),
                         ),
                       ),
                     ),
@@ -115,6 +128,9 @@ class _SearchFieldState extends State<SearchField> {
                         ),
                       )
                       .toList();
+                  final placesToDisplay = places
+                      .where((place) => !historyPlaces.contains(place))
+                      .toList();
                   return ValueListenableBuilder(
                     valueListenable: resultsVisible,
                     builder: (context, value, child) {
@@ -131,11 +147,13 @@ class _SearchFieldState extends State<SearchField> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              const SizedBox(height: 5),
                               if (historyPlaces.isNotEmpty)
                                 for (int i = 0; i < historyPlaces.length; i++)
                                   ResultItem(
                                     currentLocation: currentLocation,
                                     onArrowClick: (name) {
+                                      _mapCubit.search(name);
                                       _searchController.value =
                                           TextEditingValue(text: name);
                                     },
@@ -150,34 +168,37 @@ class _SearchFieldState extends State<SearchField> {
                                     isFromHistory: true,
                                     isLast:
                                         i == historyPlaces.length - 1 &&
-                                        places.isEmpty,
+                                        placesToDisplay.isEmpty,
                                   ),
-                              ...List.generate(places.length, (index) {
-                                if (historyPlaces.contains(places[index])) {
-                                  return Container();
-                                }
+                              ...List.generate(placesToDisplay.length, (index) {
                                 return ResultItem(
                                   currentLocation: currentLocation,
-                                  place: places[index],
+                                  place: placesToDisplay[index],
                                   onArrowClick: (name) {
+                                    _mapCubit.search(name);
                                     _searchController.value = TextEditingValue(
                                       text: name,
                                     );
-                                    _mapCubit.search(name);
                                   },
                                   onTap: () {
+                                    print(
+                                      "placeId ${placesToDisplay[index].placeId}",
+                                    );
                                     _mapCubit.fetchRouteFromOSRM(
                                       currentLocation,
-                                      places[index],
+                                      placesToDisplay[index],
                                     );
-                                    _mapCubit.addPlaceToHistory(places[index]);
+                                    _mapCubit.addPlaceToHistory(
+                                      placesToDisplay[index],
+                                    );
                                     _closeSearch();
                                   },
                                   isFromHistory: false,
-                                  isLast: index == places.length - 1,
+                                  isLast: index == placesToDisplay.length - 1,
                                 );
                               }),
-                              if (historyPlaces.isNotEmpty || places.isNotEmpty)
+                              if (historyPlaces.isNotEmpty ||
+                                  placesToDisplay.isNotEmpty)
                                 const SizedBox(height: 10),
                             ],
                           ),

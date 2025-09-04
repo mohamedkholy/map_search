@@ -50,22 +50,21 @@ class Place {
   Map<String, dynamic> toJson() => _$PlaceToJson(this);
 
   @override
-  int get hashCode =>
-      placeId.hashCode |
-      osmId.hashCode |
-      placeRank.hashCode |
-      importance.hashCode |
-      addresstype.hashCode |
-      name.hashCode |
-      displayName.hashCode |
-      boundingbox.hashCode;
+  int get hashCode => Object.hash(
+    osmId,
+    placeRank,
+    importance,
+    addresstype,
+    name,
+    displayName,
+    boundingbox,
+  );
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
 
     return other is Place &&
-        other.placeId == placeId &&
         other.licence == licence &&
         other.osmType == osmType &&
         other.osmId == osmId &&
@@ -77,8 +76,7 @@ class Place {
         other.importance == importance &&
         other.addresstype == addresstype &&
         other.name == name &&
-        other.displayName == displayName &&
-        other.boundingbox == boundingbox;
+        other.displayName == displayName;
   }
 
   @override
